@@ -20,7 +20,7 @@ app = FastAPI(
 # CORS configuration from environment variables
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://localhost:5173"
+    "http://localhost:3000,http://localhost:5173,https://tekrowe-case-study-generator.vercel.app/,https://tekrowe-case-study-generator.vercel.app"
 ).split(",")
 
 # Add CORS middleware for React frontend
