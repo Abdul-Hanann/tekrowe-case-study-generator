@@ -34,6 +34,7 @@ function App() {
       [name]: value
     }));
   };
+  
 
   const generateCaseStudy = async (endpoint) => {
     if (!formData.clientName.trim() || !formData.projectDetails.trim()) {
