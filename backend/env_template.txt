@@ -1,0 +1,21 @@
+# Backend Environment Variables for Render Deployment
+# Copy this to .env and fill in your values
+
+# OpenAI Configuration
+OPENAI_API_KEY=sk-your-openai-api-key-here
+
+# Server Configuration
+PORT=8000
+HOST=0.0.0.0
+
+# Optional: Custom model IDs (if you have access to specific models)
+# INTRO_MODEL_ID=gpt-4o-mini
+# SOLUTION_MODEL_ID=gpt-4o-mini
+# IMPACT_MODEL_ID=gpt-4o-mini
+# FALLBACK_MODEL=gpt-4o-mini
+
+# CORS Configuration (for production)
+# ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app,http://localhost:3000
+
+# Logging
+LOG_LEVEL=info
