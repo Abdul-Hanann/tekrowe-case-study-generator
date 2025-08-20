@@ -40,6 +40,7 @@ function App() {
   const [isEditing, setIsEditing] = useState(false);
   const [editedCaseStudy, setEditedCaseStudy] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   // const eventSourceRef = useRef(null);
 
   const handleInputChange = (e) => {
@@ -493,12 +494,17 @@ ${impactValues.impact_values}`;
   };
 
   const resetToInitial = () => {
-    // Ask for confirmation before resetting
+    // Show custom confirmation modal instead of window.confirm
     if (caseStudy || formData.clientName || formData.projectDetails) {
-      const confirmed = window.confirm('Are you sure you want to reset? This will clear all data and return to the initial state.');
-      if (!confirmed) return;
+      setShowResetModal(true);
+      return;
     }
     
+    // If no data to reset, just reset directly
+    performReset();
+  };
+
+  const performReset = () => {
     setFormData({
       clientName: '',
       projectDetails: ''
@@ -517,6 +523,11 @@ ${impactValues.impact_values}`;
     setIsEditing(false);
     setEditedCaseStudy('');
     setCopySuccess(false);
+    setShowResetModal(false);
+  };
+
+  const closeResetModal = () => {
+    setShowResetModal(false);
   };
 
   const getStepIcon = (status) => {
@@ -566,14 +577,16 @@ ${impactValues.impact_values}`;
                 <Building2 className="form-icon" />
                 <h2>Project Information</h2>
               </div>
-              <button
-                onClick={resetToInitial}
-                className="btn-reset"
-                title="Reset to initial state"
-              >
-                <RotateCcw className="btn-icon" />
-                Reset
-              </button>
+              {(caseStudy || formData.clientName || formData.projectDetails || streaming || loading) && (
+                <button
+                  onClick={resetToInitial}
+                  className="btn-reset"
+                  title="Reset to initial state"
+                >
+                  <RotateCcw className="btn-icon" />
+                  Reset
+                </button>
+              )}
             </div>
             
             <div className="form-group">
@@ -827,6 +840,46 @@ ${impactValues.impact_values}`;
           )}
         </div>
       </main>
+
+      {/* Custom Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="modal-overlay" onClick={closeResetModal}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="modal-icon">
+                <RotateCcw className="modal-icon-svg" />
+              </div>
+              <h3>Reset to Initial State</h3>
+            </div>
+            
+            <div className="modal-body">
+              <p>Are you sure you want to reset? This will:</p>
+              <ul>
+                <li>Clear all form data</li>
+                <li>Remove the generated case study</li>
+                <li>Reset all progress</li>
+                <li>Return to the initial state</li>
+              </ul>
+              <p className="modal-warning">This action cannot be undone.</p>
+            </div>
+            
+            <div className="modal-actions">
+              <button
+                onClick={closeResetModal}
+                className="btn btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={performReset}
+                className="btn btn-danger"
+              >
+                Reset Everything
+              </button>
+              </div>
+          </div>
+        </div>
+      )}
 
       <footer className="footer">
         <p>&copy; 2025 Tekrowe. Professional case study generation. Powered by Tekrowe.</p>
