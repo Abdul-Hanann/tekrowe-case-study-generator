@@ -1,9 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
 import sys
+import json
+import asyncio
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -20,7 +23,7 @@ app = FastAPI(
 # CORS configuration from environment variables
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS", 
-    "http://localhost:3000,http://localhost:5173,https://tekrowe-case-study-generator.vercel.app/,https://tekrowe-case-study-generator.vercel.app"
+    "http://localhost:3000,http://localhost:3001,http://localhost:5173,https://tekrowe-case-study-generator.vercel.app/,https://tekrowe-case-study-generator.vercel.app"
 ).split(",")
 
 # Add CORS middleware for React frontend
@@ -226,6 +229,73 @@ async def health_check():
         message="API is operational",
         openai_configured=bool(API_KEY),
         environment=os.getenv("ENVIRONMENT", "development")
+    )
+
+@app.post("/generate-case-study-stream")
+async def create_case_study_stream(request: CaseStudyRequest):
+    """Generate a case study with streaming progress updates"""
+    async def generate_stream():
+        try:
+            if not request.client_name.strip() or not request.project_details.strip():
+                yield f"data: {json.dumps({'error': 'Client name and project details are required'})}\n\n"
+                return
+            
+            context_text = f"Client: {request.client_name}\n\n{request.project_details}".strip()
+            
+            # Step 1: Generate Introduction
+            yield f"data: {json.dumps({'step': 1, 'status': 'processing', 'message': 'Generating Introduction...'})}\n\n"
+            intro = generate_intro(context_text)
+            yield f"data: {json.dumps({'step': 1, 'status': 'completed', 'message': 'Introduction completed', 'data': intro})}\n\n"
+            
+            # Step 2: Generate Solution
+            yield f"data: {json.dumps({'step': 2, 'status': 'processing', 'message': 'Generating Solution...'})}\n\n"
+            solution = generate_solution(context_text)
+            yield f"data: {json.dumps({'step': 2, 'status': 'completed', 'message': 'Solution completed', 'data': solution})}\n\n"
+            
+            # Step 3: Generate Impact & Values
+            yield f"data: {json.dumps({'step': 3, 'status': 'processing', 'message': 'Generating Impact & Values...'})}\n\n"
+            impact_values = generate_impact_values(context_text)
+            yield f"data: {json.dumps({'step': 3, 'status': 'completed', 'message': 'Impact & Values completed', 'data': impact_values})}\n\n"
+            
+            # Final step: Compose full case study
+            yield f"data: {json.dumps({'step': 4, 'status': 'processing', 'message': 'Composing final case study...'})}\n\n"
+            
+            full_case_study = f"""
+🔹 **Case Study: {request.client_name}**
+
+📌 **Introduction**
+{intro}
+
+🛠️ **Solution**
+{solution}
+
+📈 **Impact & Values**
+{impact_values}
+"""
+            
+            yield f"data: {json.dumps({'step': 4, 'status': 'completed', 'message': 'Case study completed!', 'data': full_case_study.strip()})}\n\n"
+            
+            # Send final complete response
+            final_response = {
+                "client_name": request.client_name,
+                "introduction": intro,
+                "solution": solution,
+                "impact_values": impact_values,
+                "full_case_study": full_case_study.strip()
+            }
+            yield f"data: {json.dumps({'step': 'final', 'status': 'completed', 'message': 'All done!', 'data': final_response})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'error': f'Error generating case study: {str(e)}'})}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+        }
     )
 
 @app.post("/generate-case-study", response_model=CaseStudyResponse)
