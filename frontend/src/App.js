@@ -574,8 +574,8 @@ ${impactValues.impact_values}`;
           <div className="form-section">
             <div className="form-header">
               <div className="form-header-left">
-                <Building2 className="form-icon" />
-                <h2>Project Information</h2>
+              <Building2 className="form-icon" />
+              <h2>Project Information</h2>
               </div>
               {(caseStudy || formData.clientName || formData.projectDetails || streaming || loading) && (
                 <button
@@ -807,13 +807,12 @@ ${impactValues.impact_values}`;
                       )}
                       {caseStudy.solution && (
                         <div className="partial-section">
-                          <h4>🛠️ Solution</h4>
+                          <h4>🛠️ </h4>
                           <ReactMarkdown>{caseStudy.solution}</ReactMarkdown>
                         </div>
                       )}
                       {caseStudy.impact_values && (
                         <div className="partial-section">
-                          <h4>📈 Impact & Values</h4>
                           <ReactMarkdown>{caseStudy.impact_values}</ReactMarkdown>
                         </div>
                       )}
