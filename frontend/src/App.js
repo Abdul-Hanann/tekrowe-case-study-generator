@@ -50,7 +50,7 @@ function App() {
     }));
   };
   
-  const generateCaseStudyStream = async () => {
+  const generateCaseStudySequential = async () => {
     if (!formData.clientName.trim() || !formData.projectDetails.trim()) {
       setError('Please fill in both client name and project details.');
       return;
@@ -70,91 +70,123 @@ function App() {
     });
 
     try {
-      const response = await fetch(`${API_BASE_URL}/generate-case-study-stream`, {
+      const context = {
+        client_name: formData.clientName.trim(),
+        project_details: formData.projectDetails.trim()
+      };
+
+      // Step 1: Generate Introduction
+      setProgress(prev => ({
+        ...prev,
+        step1: { status: 'processing', message: 'Generating Introduction...', data: null }
+      }));
+
+      const introResponse = await fetch(`${API_BASE_URL}/generate-introduction`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          client_name: formData.clientName.trim(),
-          project_details: formData.projectDetails.trim()
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(context)
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!introResponse.ok) {
+        throw new Error(`Introduction generation failed: ${introResponse.status}`);
       }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      const introduction = await introResponse.json();
+      
+      setProgress(prev => ({
+        ...prev,
+        step1: { status: 'completed', message: 'Introduction completed', data: introduction.introduction }
+      }));
 
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
+      // Step 2: Generate Solution
+      setProgress(prev => ({
+        ...prev,
+        step2: { status: 'processing', message: 'Generating Solution...', data: null }
+      }));
 
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+      const solutionResponse = await fetch(`${API_BASE_URL}/generate-solution`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(context)
+      });
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            try {
-              const data = JSON.parse(line.slice(6));
-              
-              if (data.error) {
-                setError(data.error);
-                setStreaming(false);
-                setLoading(false);
-                return;
-              }
-
-              if (data.step === 'final') {
-                setCaseStudy(data.data);
-                setStreaming(false);
-                setLoading(false);
-                return;
-              }
-
-              if (data.step >= 1 && data.step <= 4) {
-                const stepKey = `step${data.step}`;
-                setProgress(prev => ({
-                  ...prev,
-                  [stepKey]: {
-                    status: data.status,
-                    message: data.message,
-                    data: data.data || prev[stepKey]?.data
-                  }
-                }));
-
-                // If this step has data, update the case study preview
-                if (data.data && data.step < 4) {
-                  setCaseStudy(prev => {
-                    if (!prev) {
-                      return {
-                        client_name: formData.clientName,
-                        introduction: '',
-                        solution: '',
-                        impact_values: '',
-                        full_case_study: ''
-                      };
-                    }
-                    
-                    const updated = { ...prev };
-                    if (data.step === 1) updated.introduction = data.data;
-                    if (data.step === 2) updated.solution = data.data;
-                    if (data.step === 3) updated.impact_values = data.data;
-                    
-                    return updated;
-                  });
-                }
-              }
-            } catch (parseError) {
-              console.error('Error parsing SSE data:', parseError);
-            }
-          }
-        }
+      if (!solutionResponse.ok) {
+        throw new Error(`Solution generation failed: ${solutionResponse.status}`);
       }
+
+      const solution = await solutionResponse.json();
+      
+      setProgress(prev => ({
+        ...prev,
+        step2: { status: 'completed', message: 'Solution completed', data: solution.solution }
+      }));
+
+      // Step 3: Generate Impact & Values
+      setProgress(prev => ({
+        ...prev,
+        step3: { status: 'processing', message: 'Generating Impact & Values...', data: null }
+      }));
+
+      const impactResponse = await fetch(`${API_BASE_URL}/generate-impact-values`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(context)
+      });
+
+      if (!impactResponse.ok) {
+        throw new Error(`Impact & Values generation failed: ${impactResponse.status}`);
+      }
+
+      const impactValues = await impactResponse.json();
+      
+      setProgress(prev => ({
+        ...prev,
+        step3: { status: 'completed', message: 'Impact & Values completed', data: impactValues.impact_values }
+      }));
+
+      // Step 4: Compose Final Case Study
+      setProgress(prev => ({
+        ...prev,
+        step4: { status: 'processing', message: 'Composing final case study...', data: null }
+      }));
+
+      const fullCaseStudy = `🔹 **Case Study: ${formData.clientName}**
+
+📌 **Introduction**
+${introduction.introduction}
+
+🛠️ **Solution**
+${solution.solution}
+
+📈 **Impact & Values**
+${impactValues.impact_values}`;
+
+      setProgress(prev => ({
+        ...prev,
+        step4: { status: 'completed', message: 'Case study completed!', data: fullCaseStudy }
+      }));
+
+      // Set the complete case study
+      setCaseStudy({
+        client_name: formData.clientName,
+        introduction: introduction.introduction,
+        solution: solution.solution,
+        impact_values: impactValues.impact_values,
+        full_case_study: fullCaseStudy
+      });
+
     } catch (err) {
+      console.error('Error generating case study:', err);
       setError(err.message || 'An error occurred while generating the case study.');
+      
+      // Reset progress on error
+      setProgress({
+        step1: { status: 'pending', message: 'Introduction', data: null },
+        step2: { status: 'pending', message: 'Solution', data: null },
+        step3: { status: 'pending', message: 'Impact & Values', data: null },
+        step4: { status: 'pending', message: 'Final Composition', data: null }
+      });
+    } finally {
       setStreaming(false);
       setLoading(false);
     }
@@ -572,7 +604,7 @@ function App() {
 
             <div className="form-actions">
               <button
-                onClick={generateCaseStudyStream}
+                onClick={generateCaseStudySequential}
                 disabled={loading || streaming}
                 className="btn btn-primary btn-centered"
               >

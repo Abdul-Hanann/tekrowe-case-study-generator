@@ -318,23 +318,25 @@ async def create_case_study(request: CaseStudyRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating case study: {str(e)}")
 
-@app.post("/generate-intro")
-async def create_intro(request: CaseStudyRequest):
+@app.post("/generate-introduction")
+async def generate_introduction(request: CaseStudyRequest):
     """Generate only the introduction section"""
     try:
         if not request.client_name.strip() or not request.project_details.strip():
             raise HTTPException(status_code=400, detail="Client name and project details are required")
         
         context_text = f"Client: {request.client_name}\n\n{request.project_details}".strip()
-        intro = generate_intro(context_text)
+        introduction = generate_intro(context_text)
         
-        return {"introduction": intro}
-    
+        return {
+            "client_name": request.client_name,
+            "introduction": introduction
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating introduction: {str(e)}")
 
 @app.post("/generate-solution")
-async def create_solution(request: CaseStudyRequest):
+async def generate_solution_endpoint(request: CaseStudyRequest):
     """Generate only the solution section"""
     try:
         if not request.client_name.strip() or not request.project_details.strip():
@@ -348,9 +350,9 @@ async def create_solution(request: CaseStudyRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating solution: {str(e)}")
 
-@app.post("/generate-impact")
-async def create_impact(request: CaseStudyRequest):
-    """Generate only the impact and values section"""
+@app.post("/generate-impact-values")
+async def generate_impact_values_endpoint(request: CaseStudyRequest):
+    """Generate only the impact & values section"""
     try:
         if not request.client_name.strip() or not request.project_details.strip():
             raise HTTPException(status_code=400, detail="Client name and project details are required")
@@ -361,7 +363,7 @@ async def create_impact(request: CaseStudyRequest):
         return {"impact_values": impact_values}
     
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating impact: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating impact & values: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
