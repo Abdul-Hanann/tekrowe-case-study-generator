@@ -51,6 +51,22 @@ function App() {
     }));
   };
   
+  const cleanAIContent = (content, sectionName) => {
+    if (!content) return '';
+    
+    // Remove common header patterns that AI might include
+    const cleaned = content
+      // Remove markdown headers for the specific section
+      .replace(new RegExp(`^\\*\\*${sectionName}\\*\\*\\s*`, 'mi'), '')
+      .replace(new RegExp(`^### ${sectionName}.*\\n`, 'mi'), '')
+      .replace(new RegExp(`^## ${sectionName}.*\\n`, 'mi'), '')
+      .replace(new RegExp(`^# ${sectionName}.*\\n`, 'mi'), '')
+      // Remove any leading/trailing whitespace
+      .trim();
+    
+    return cleaned;
+  };
+
   const generateCaseStudySequential = async () => {
     if (!formData.clientName.trim() || !formData.projectDetails.trim()) {
       setError('Please fill in both client name and project details.');
@@ -154,13 +170,16 @@ function App() {
       const fullCaseStudy = `🔹 **Case Study: ${formData.clientName}**
 
 📌 **Introduction**
-${introduction.introduction}
+
+${cleanAIContent(introduction.introduction, 'Introduction')}
 
 🛠️ **Solution**
-${solution.solution}
+
+${cleanAIContent(solution.solution, 'Solution')}
 
 📈 **Impact & Values**
-${impactValues.impact_values}`;
+
+${cleanAIContent(impactValues.impact_values, 'Impact')}`;
 
       setProgress(prev => ({
         ...prev,
@@ -170,9 +189,9 @@ ${impactValues.impact_values}`;
       // Set the complete case study
       setCaseStudy({
         client_name: formData.clientName,
-        introduction: introduction.introduction,
-        solution: solution.solution,
-        impact_values: impactValues.impact_values,
+        introduction: cleanAIContent(introduction.introduction, 'Introduction'),
+        solution: cleanAIContent(solution.solution, 'Solution'),
+        impact_values: cleanAIContent(impactValues.impact_values, 'Impact'),
         full_case_study: fullCaseStudy
       });
 
